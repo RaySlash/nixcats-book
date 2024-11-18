@@ -3,4 +3,7 @@ authors = ["RaySlash"]
 language = "en"
 multilingual = false
 src = "src"
-title = "NixCats: A Comprehensive Guide"
+title = "NixCats Book"
+
+[rust]
+edition = "2021"
