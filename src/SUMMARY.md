@@ -7,5 +7,6 @@
     - [Nix](./intro-nix.md)
 - [Architecture](./architecture.md)
 - [Comparison](./comparison.md)
-- [Templates](./templates.md)
+- [Getting Started](./getting_started.md)
+    - [Templates](./templates.md)
 - [References](./references.md)

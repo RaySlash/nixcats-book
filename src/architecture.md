@@ -38,9 +38,9 @@ The **nixCats messaging system** bridges the gap between Nix and Lua. It allows 
 # flake.nix
 nixCatsUtils.packageDefinitions = {
   exampleConfig = {
-    plugins = [
-      "nvim-lua/plenary.nvim" 
-      "nvim-treesitter/nvim-treesitter"
+    startupPlugins = with pkgs.vimPlugins; [
+      plenary-nvim
+      nvim-treesitter
     ];
     lspsAndRuntimeDeps = [ "pyright" ];
   };
@@ -53,7 +53,7 @@ Generates the Lua table:
 -- plugin/nixCats.lua
 return {
   exampleConfig = {
-    plugins = { "nvim-lua/plenary.nvim", "nvim-treesitter/nvim-treesitter" },
+    startupPlugins = { "nvim-lua/plenary.nvim", "nvim-treesitter/nvim-treesitter" },
     lspsAndRuntimeDeps = { "pyright" },
   },
 }
@@ -63,14 +63,14 @@ In Lua:
 
 ```lua
 local nixCats = require('nixCats')
-if nixCats("exampleConfig.plugins") then
+if nixCats("exampleConfig.startupPlugins") then
   -- Load plugin-specific configurations
 end
 ```
 
 ---
 
-#### 4.2.2 Category System
+### Category System
 
 The **category system** enables fine-grained control of plugins and configurations across different environments. Categories are logical groups of plugins or features (e.g., `ide`, `minimal`, `python`, `git`). You can enable or disable these categories within Nix, and the changes are automatically reflected in Lua.
 
@@ -82,11 +82,14 @@ Imagine you want a lightweight configuration for terminal sessions and a full-fe
 ```nix
 packageDefinitions = {
   ide = {
-    plugins = [ "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" ];
+    startupPlugins = with pkgs.vimPlugins; [ 
+        plenary-nvim
+        telescope-nvim
+    ];
     categories = { ide = true };
   };
   minimal = {
-    plugins = [ "junegunn/vim-easy-align" ];
+    startupPlugins = with pkgs.vimPlugins; [ vim-easy-align ];
     categories = { ide = false };
   };
 };
@@ -105,7 +108,7 @@ end
 
 ---
 
-#### 4.2.3 Multiple Configurations
+### Multiple Configurations
 
 nixCats supports managing **multiple configurations** within the same project. You can define multiple entries in `packageDefinitions` for different purposes, such as:
 
@@ -117,11 +120,11 @@ nixCats supports managing **multiple configurations** within the same project. Y
 ```nix
 packageDefinitions = {
   fullIde = {
-    plugins = [ "neoclide/coc.nvim" ];
+    startupPlugins = with pkgs.vimPlugin; [ coc-nvim ];
     wrapRc = true;
   };
   minimal = {
-    plugins = [ "tpope/vim-commentary" ];
+    startupPlugins = with pkgs.vimPlugin; [ vim-commentary ];
     wrapRc = false;
   };
 };
@@ -129,54 +132,9 @@ packageDefinitions = {
 
 ---
 
-### 4.3 **Templates**
+## Advanced Features
 
-nixCats provides several templates to suit different user needs:
-
-1. **Standalone Flake**: A self-contained flake for standalone Neovim configurations.
-2. **Nix Expression Flake Outputs**: Combines Neovim into your system flake.
-3. **Lua Utilities**: Simplifies adapting non-Nix setups to work within nixCats.
-
----
-
-**Diagram: nixCats Template Comparison**  
-(*Visualize templates with pros/cons and arrows showing progression: Standalone → Flake Outputs → Full Integration*)
-
----
-
-### 4.4 **Getting Started**
-
-Here’s a simple walkthrough to set up nixCats:
-
-1. **Clone the Template**:
-
-   ```bash
-   git clone https://github.com/BirdeeHub/nixCats-nvim.git
-   cd nixCats-nvim/templates/example
-   ```
-
-2. **Edit `flake.nix`**:
-   Add your plugins and categories.
-
-   ```nix
-   plugins = [ "nvim-lua/plenary.nvim" "nvim-treesitter/nvim-treesitter" ];
-   ```
-
-3. **Run Nix Shell**:
-   ```bash
-   nix develop
-   ```
-
-4. **Open Neovim**:
-   ```bash
-   nvim
-   ```
-
----
-
-### 4.5 **Advanced Features**
-
-#### 4.5.1 Dynamic Configurations with Categories
+### Dynamic Configurations with Categories
 
 ```lua
 -- Example of using categories dynamically in Lua
@@ -185,15 +143,15 @@ if nixCats("python.ide") then
 end
 ```
 
-#### 4.5.2 Managing Dependencies  
+### Managing Dependencies  
 
 - Use the `lspsAndRuntimeDeps` field to include tools like `pyright` or `rust-analyzer` in your configuration.
 
 ---
 
-### 4.6 **Challenges and Solutions**
+## Challenges and Solutions
 
-#### Issue: Mason Compatibility  
+### Issue: Mason Compatibility  
 Mason.nvim doesn’t work on NixOS due to path issues.
 
 **Solution**:  
@@ -201,7 +159,7 @@ Use `lspsAndRuntimeDeps` in `flake.nix` to install LSPs.
 
 ---
 
-### 4.7 **Conclusion**
+## Conclusion
 
 nixCats simplifies and enhances Neovim configuration management using the power of Nix. Whether you're a beginner or an advanced user, its modular architecture, category system, and Lua messaging enable a smooth and scalable development experience.
 
