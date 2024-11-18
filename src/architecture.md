@@ -4,7 +4,7 @@ This chapter will explore the different architectural designs implemented within
 
 ## Overview
 
-At its core, nixCats is a modular and customizable Neovim configuration framework built with Nix. It separates plugin and dependency management (handled by Nix) from the actual Neovim configuration (written in Lua). The main goals of nixCats are:
+At its core, nixCats is a modular and customizable Neovim configuration framework built with Nix. It separates plugin and dependency management _(handled by Nix)_ from the actual Neovim configuration _(written in Lua)_. The main goals of nixCats are:
 - **Seamless integration of Nix and Lua:**
         Nix is used for downloading and building dependencies.
         Lua is used for configuration within Neovim’s typical directory structure.
@@ -15,9 +15,14 @@ At its core, nixCats is a modular and customizable Neovim configuration framewor
 
 - **Ease of use and flexibility:**
         Allow new users to get started quickly while providing advanced features for experienced users.
-Here’s a high-level view of how nixCats operates:
+
+The following shows the flow of data from nix to lua in neovim:
+```hs
+(Nix-Dependencies) → (NixCats-Messaging) → (Lua-Configuration) → (Neovim-Environment)
+````
 
 ## Core Features
+
 ### nixCats Messaging System
 
 The **nixCats messaging system** bridges the gap between Nix and Lua. It allows the passing of data (e.g., plugin names, configuration flags, or runtime dependencies) from Nix into Lua. This ensures you don’t need to write Lua within Nix files, keeping both systems cleanly separated.
