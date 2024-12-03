@@ -18,74 +18,169 @@ environment.systemPackages = with pkgs; [
 The nixpkgs derivations do already a great job in wrapping neovim itself and build from source. The 
 next step obviously would be to add a few plugins to get our workflow going smoothly as we want to.
 
-From the [Neovim Manual](https://neovim.io/doc/user/), we can deduce that neovim looks for the lua configuration `init.vim` or `init.lua` at `$HOME/.config/nvim`. We are only going to look at `init.lua` in this book. Our goal here is to use lua to configure neovim.
+## Home Manager
 
-In NixOS, you can look at the available options for neovim at [search.nixos.org](https://search.nixos.org/options?channel=24.11&show=programs.neovim.enable&from=0&size=50&sort=relevance&type=packages&query=neovim), and immediately you can see that you are unable to use lua to configure the neovim with just the NixOS options available for neovim.
-
-When using `home-manager`, you are now able to set the `init.lua` using the option `programs.neovim.extraLuaConfig` at [home-manager-options.extranix.com](https://home-manager-options.extranix.com/?query=neovim&release=master).
-But, you are now only able to add the `init.lua` in the option.
-If you wanted to modularize your configuration or use `ftplugin` feature of neovim,
-your best option is to add every file using the `home-manager` option
+When using `home-manager`, you are able to link files into place.
 ```nix
-home.".config/nvim/ftplugin/lua.lua".source = builtins.readFile ./ftplugin/lua.lua
+home.".config/nvim/".source = ./mynvimconfig;
 ```
 
+Whats the problem with this! Its great! I can download stuff with a neovim package manager and mason... right?
 
-> Usually, `$HOME` in Linux systems is defined as `/home/<user>`, where `<user>` represent the current logged-in user.
-
-An example that override the nixpkgs neovim derivation to add extra plugins that are not available in `nixpkgs`:
+Well, you can try. But if you want treesitter grammers, you're also going to want this.
 
 ```nix
-{ config, pkgs, ... }:
+home.packages = with pkgs; [
+  stdenv.cc.cc
+];
+```
 
-let
-  easygrep = pkgs.vimUtils.buildVimPluginFrom2Nix {
-    name = "vim-easygrep";
-    src = pkgs.fetchFromGitHub {
-      owner = "dkprice";
-      repo = "vim-easygrep";
-      rev = "d0c36a77cc63c22648e792796b1815b44164653a";
-      hash = "sha256-bL33/S+caNmEYGcMLNCanFZyEYUOUmSsedCVBn4tV3g=";
+And mason just isn't going to work on nixos, so youre going to want to swap that for just lspconfig and add those too.
+
+```nix
+home.packages = with pkgs; [
+  stdenv.cc.cc
+  nixd
+  lua-language-server
+  rust-analyzer
+];
+```
+
+Uh oh!!!
+
+How do we pass in info from nix into our configuration? I'm using agenix!
+
+Well, now we have to probably write some stuff in nix. Lets change our approach and use the home manager module.
+
+```nix
+programs.neovim = {
+  enable = true;
+  plugins = with pkgs.vimPlugins [
+    lze;
+    {
+      plugin = telescope-nvim;
+      config = ''
+        require("lze").load {
+          "telescope.nvim",
+          cmd = "Telescope",
+        }
+      '';
+      type = "lua";
+      optional = true;
+    }
+    {
+      plugin = sweetie-nvim;
+      config = ''
+        require("lze").load {
+          "sweetie.nvim",
+          colorscheme = "sweetie",
+        }
+      '';
+      type = "lua";
+      optional = true;
+    }
+  ];
+};
+```
+
+Oh no... This is all wrong... Where is our auto complete! Where did our directory go?
+
+You think I'm going to write all my lua in nix strings just so that I can `"${interpolate}"` if I need to?
+
+Also, this is tied to home manager! What if you don't want home manager on a machine?
+
+What if you want to run it on another person's machine without putting your whole home-manager configuration on their computer?
+
+# A naieve standalone approach
+
+Lets try `pkgs.wrapNeovim` in a `flake`.
+
+```nix
+{
+  inputs = {
+    nixpkgs = {
+      url = "github:nixos/nixpkgs/nixpkgs-unstable";
     };
   };
-in
-{
-  environment.systemPackages = [
-    (pkgs.neovim.override {
+  outputs = { nixpkgs, neovim-nightly, ...}@inputs: let
+    forAllSys = nixpkgs.lib.genAttrs nixpkgs.lib.platforms.all;
+  in {
+    packages = forAllSys (system: let
+      pkgs = import nixpkgs { inherit system; };
+      myNeovim = let
+        luaRC = final.writeText "init.lua" ''
+          local configdir = "${./mynvimconfig}";
+          vim.opt.packpath:prepend(configdir)
+          vim.opt.runtimepath:prepend(configdir)
+          vim.opt.runtimepath:append(configdir .. "/after")
+          if vim.fn.filereadable(configdir .. "/init.lua") == 1 then
+            dofile(configdir .. "/init.lua")
+          end
+        '';
+      in
+      pkgs.wrapNeovim pkgs.neovim-unwrapped {
         configure = {
-          packages.myPlugins = with pkgs.vimPlugins; {
-          start = [
-            vim-go # already packaged plugin
-            easygrep # custom package
+          customRC = ''lua dofile("${luaRC}")'';
+          packages.all.start = with pkgs.vimPlugins; [ 
+            nvim-treesitter.withAllGrammars
+            lze
+            telescope-nvim
           ];
-          opt = [];
+          packages.all.opt = with pkgs.vimPlugins; [
+          ];
         };
-        # ...
+        extraMakeWrapperArgs = builtins.concatStringsSep " " [
+          ''--prefix PATH : "${pkgs.lib.makeBinPath (with pkgs; [
+            stdenv.cc.cc
+            nixd
+            lua-language-server
+            rust-analyzer
+          ])}"''
+        ];
+        extraLuaPackages = (_: []);
+        extraPythonPackages = (_: []);
+        withPython3 = true;
+        extraPython3Packages = (_: []);
+        withNodeJs = false;
+        withRuby = true;
+        vimAlias = false;
+        viAlias = false;
+        extraName = "";
       };
-    })
-  ];
+    in
+    {
+      default = myNeovim;
+    });
+  };
 }
 ```
 
-## Insights
+Well, this is kinda cool. We can run this from the command line, it pulls in our directory... It's pretty close to what we want.
 
-The above module example works well but burdens the user with the responsibility to update the `rev` and `hash` manually in each derivation of custom vim plugins, that are not in nixpkgs.
-Also, In case you wanted to call setup on any plugins that was fetched using nix, you would have to interpolate lua as nix
-strings to achieve this such as `''${interpolate a string}'';`.
+But still... It could be better.
 
-This interpolation of lua is pretty inconvenient to write for a couple of reasons but not limited to:
+How do we pass info from nix into our directory?
 
-- User would not be able to use any LSP (Language Server Protocol) on the interpolated lua strings.
-- Maintainability of code in strings is a horrible experience.
+The answer? Usually people just add a bunch of global variables.
 
-The ideal neovim configuration neovim would necessarily need a few feature to be maintainable:
+Obviously that's not super ideal.
 
-- A way to write `lua` separately in a lua file and `nix` in its own file.
+Also, every time we want to change it, we have to reload!
+
+## What do we want?
+
+The ideal neovim configuration would necessarily need a few feature to be maintainable:
+
+- A way to write `lua` separately in a `lua` file and `nix` in its own file.
+- A way to seamlessly pass extra arbitrary info from `nix` to our configuration, without creating a long list of `vim.g.global_variables`.
 - Run our configuration outside of our system that have access to `nix` (CLI).
+- Have utilities for easily installing plugins that aren't on `nixpkgs`.
 - Have multiple configuration profiles within a same configuration base.
+- Have a mode that allows editing `lua` and seeing the results without rebuilding via nix, assuming the required things are already installed.
 - Our configuration should be exported* as `nixosModule`, `homeManagerModule`, `overlay` and `package`.
-This enable users to integrate with any necessary system with ease.
 
-Now lets enter the `nixcats` world. The next page would talk about the options and specific architectural pattern within nixcats.
+This would enable users to integrate with any necessary system with ease.
+
+Now lets enter the `nixCats` world. The next pages will talk about the options and specific architectural pattern within `nixCats`.
 
 > `*`: The exports could differ from template to template. Thus, make sure you choose a template that fits your need.
