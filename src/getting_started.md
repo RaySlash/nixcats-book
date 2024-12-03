@@ -14,19 +14,40 @@ Here’s a simple walkthrough to set up nixCats:
     Add your plugins and categories.
 
     ```nix
-    plugins = with pkgs.vimPlugins; [
-        plenary-nvim
-        nvim-treesitter.withAllGrammers
-    ];
+    categoryDefinitions = { pkgs, ... }: {
+        startupPlugins = {
+            general = with pkgs.vimPlugins; [
+                plenary-nvim
+                nvim-treesitter.withAllGrammers
+                # mkNvimPlugin build a plugin from flake input
+                (mkNvimPlugin inputs.plugins-telescope "telescope") 
+            ];
+        };
+    }
+    
+    packageDefinitions = {
+        mynixcat = {pkgs, ...}: {
+            settings = {
+                wrapRc = true;
+                aliases = ["vi" "vim" "nvim"];
+                # Enable to use flake inputs to build nightly version of neovim
+                # neovim-unwrapped =
+                #       inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
+            };
+            categories = {
+                general = true;
+            };
+            extra = {};
+        };
+    };
+    
+    defaultPackageName = "mynixcat";
     ```
 
-3. **Run Nix Shell**:
-    ```bash
-    nix develop
-    ```
+    > See the comments in each templates for further reference.
 
-4. **Open Neovim**:
+3. **Open Neovim**:
     ```bash
-    nvim
+    nix run .
     ```
 

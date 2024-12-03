@@ -23,7 +23,7 @@ nix-shell -p neovim git
 This command starts a `bash` shell environment with neovim and git installed, without affecting your system configuration.
 
 ## What is flakes?
-Flakes are an experimental feature that enhances reproducibility by locking dependencies and configurations in a standardized format. It is intended to replace `default.nix` which you would normally use in a Nix system. This brings a new schema where you can define your packages from the web in `inputs` and build package or a shell for the user. You could say that flakes work similar to the rust package manager `cargo` or javascript package manager `npm` which locks your dependencies in a seperate file (`Cargo.lock` and `packages-lock.json` respectively), `flake.lock` in this case.
+Flakes are an experimental feature that enhances reproducibility by locking dependencies and configurations in a standardized format. It is intended to replace `default.nix` which you would normally use in a Nix system. This brings a new schema where you can define your packages from the web in `inputs` and build package or a shell for the user. You could say that flakes work similar to the Rust package manager `cargo` or Javascript package manager `npm` which locks your dependencies in a separate file (`Cargo.lock` and `packages-lock.json` respectively), `flake.lock` in this case.
 
 ```nix
 # flake.nix

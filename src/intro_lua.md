@@ -1,6 +1,6 @@
 # Lua
 
-`Lua` is a lightweight, high-level programming language designed for simplicity and efficiency. Created with a focus on embeddability, Lua is widely used in game development, embedded systems, and scripting environments. Its key features include a small footprint, fast execution, and a clean, minimal syntax that makes it accessible even for beginners. Lua's power lies in its flexibility, allowing developers to extend its capabilities through metaprogramming and integration with other languages. It balances ease of use with robust features, such as first-class functions, coroutines, and dynamic typing.
+`Lua` is a lightweight, high-level programming language designed for simplicity and efficiency. Created with a focus on embeddability, Lua is widely used in game development, embedded systems, and scripting environments. Its key features include a small footprint, fast execution, and a clean, minimal syntax that makes it accessible even for beginners. Lua's power lies in its flexibility, allowing developers to extend its capabilities through meta-programming and integration with other languages. It balances ease of use with robust features, such as first-class functions, coroutines, and dynamic typing.
 
 ## Lua and Neovim
 

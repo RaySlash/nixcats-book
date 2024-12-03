@@ -1,5 +1,7 @@
 # Project README
 
+Visit: [rayslash.github.io/nixcats-book/](https://rayslash.github.io/nixcats-book/) 
+
 This project is a flake. You can use `nix develop` or `direnv allow` if you have dir-env.
 
 ## Dev
