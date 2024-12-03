@@ -23,20 +23,30 @@ nix-shell -p neovim git
 This command starts a `bash` shell environment with neovim and git installed, without affecting your system configuration.
 
 ## What is flakes?
-Flakes are an experimental feature that enhances reproducibility by locking dependencies and configurations in a standardized format. It is intended to replace `default.nix` which you would normally use in a Nix system. This brings a new schema where you can define your packages from the web in `inputs` and build package or a shell for the user.
+Flakes are an experimental feature that enhances reproducibility by locking dependencies and configurations in a standardized format. It is intended to replace `default.nix` which you would normally use in a Nix system. This brings a new schema where you can define your packages from the web in `inputs` and build package or a shell for the user. You could say that flakes work similar to the rust package manager `cargo` or javascript package manager `npm` which locks your dependencies in a seperate file (`Cargo.lock` and `packages-lock.json` respectively), `flake.lock` in this case.
+
 ```nix
+# flake.nix
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
-  outputs = { self, nixpkgs }: {
-    devShell.x86_64-linux = nixpkgs.mkShell {
-      buildInputs = [
-        nixpkgs.neovim
-        nixpkgs.git
-      ];
+    description = "An example NixOS configuration";
+
+    inputs = {
+        nixpkgs = { url = "github:nixos/nixpkgs/nixos-unstable"; };
+        nur = { url = "github:nix-community/NUR"; };
     };
-  };
+
+    outputs = inputs: {
+        nixosConfigurations = {
+            mysystem = inputs.nixpkgs.lib.nixosSystem {
+                system = "x86_64-linux";
+                modules = [ ./configuration.nix ];
+                specialArgs = { inherit inputs; };
+            };
+        };
+    };
 }
 ```
-This allow user to use `nix develop` to enter a shell environment defined by the flake.nix.
 
-You can learn more about nix, flakes by referring to [resources](./references.md#nix)
+This allow user to use `flakes` to build a system configuration using `nixosConfigurations` defined in the `flake.nix`.
+
+You can learn more about nix and flakes by referring to [resources](./references.md#nix)

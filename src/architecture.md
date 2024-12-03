@@ -1,165 +1,106 @@
 # Architecture
+For the following 100 lines, it is most effective to cross reference with a template!
 
-This chapter will explore the different architectural designs implemented within `nixCats-nvim` and will provide a concise understanding of the concepts involved. Lets begin uncovering each parts by starting to identify the different parts within neovim configuration.
+First choose a path for `luaPath` as your new neovim directory to be loaded into
+the store.
 
-## Overview
+Then in `categoryDefinitions`:
+You have a SET to add LISTS of plugins to the packpath (one for both
+`pack/*/start` and `pack/*/opt`), a SET to add LISTS of things to add to the path,
+a set to add lists of shared libraries,
+a set of lists to add... pretty much anything.
+Full list of these sets is at `:h nixCats.flake.outputs.categories`
 
-At its core, nixCats is a modular and customizable Neovim configuration framework built with Nix. It separates plugin and dependency management _(handled by Nix)_ from the actual Neovim configuration _(written in Lua)_. The main goals of nixCats are:
-- **Seamless integration of Nix and Lua:**
-        Nix is used for downloading and building dependencies.
-        Lua is used for configuration within Neovim’s typical directory structure.
+Those lists are in sets, and thus have names.
 
-- **Portability and Scalability:**
-        Support multiple configurations and environments using the same codebase.
-        Enable environment-specific customization using categories.
+You do this in `categoryDefintions`, which is a function provided a pkgs set.
+It also recieves the values from `packageDefintions` of the package it is being called with.
+It returns those sets of things mentioned above.
 
-- **Ease of use and flexibility:**
-        Allow new users to get started quickly while providing advanced features for experienced users.
-
-The following shows the flow of data from nix to lua in neovim:
-```hs
-(Nix-Dependencies) → (NixCats-Messaging) → (Lua-Configuration) → (Neovim-Environment)
-````
-
-## Core Features
-
-### nixCats Messaging System
-
-The **nixCats messaging system** bridges the gap between Nix and Lua. It allows the passing of data (e.g., plugin names, configuration flags, or runtime dependencies) from Nix into Lua. This ensures you don’t need to write Lua within Nix files, keeping both systems cleanly separated.
-
-**How it works**:  
-1. Nix generates a Lua table based on the configuration defined in `flake.nix`.  
-2. The Lua table is saved into a `.lua` file (e.g., `plugin/nixCats.lua`).  
-3. This table is accessible in Neovim using the `nixCats` function.
-
-**Example**:  
+`packageDefintions` is a set, containing functions that also are provided a
+pkgs set. They return a set of categories you wish to include.
+If, from your `categoryDefintions`, you returned:
 
 ```nix
-# flake.nix
-nixCatsUtils.packageDefinitions = {
-  exampleConfig = {
-    startupPlugins = with pkgs.vimPlugins; [
-      plenary-nvim
-      nvim-treesitter
+  startupPlugins = {
+    general = [
+      pkgs.vimPlugins.lz-n
+      pkgs.vimPlugins.nvim-treesitter.withAllGrammars
+      pkgs.vimPlugins.telescope
+      # etc ...
     ];
-    lspsAndRuntimeDeps = [ "pyright" ];
   };
-};
 ```
 
-Generates the Lua table:
-
-```lua
--- plugin/nixCats.lua
-return {
-  exampleConfig = {
-    startupPlugins = { "nvim-lua/plenary.nvim", "nvim-treesitter/nvim-treesitter" },
-    lspsAndRuntimeDeps = { "pyright" },
-  },
-}
-```
-
-In Lua:
-
-```lua
-local nixCats = require('nixCats')
-if nixCats("exampleConfig.startupPlugins") then
-  -- Load plugin-specific configurations
-end
-```
-
----
-
-### Category System
-
-The **category system** enables fine-grained control of plugins and configurations across different environments. Categories are logical groups of plugins or features (e.g., `ide`, `minimal`, `python`, `git`). You can enable or disable these categories within Nix, and the changes are automatically reflected in Lua.
-
-**Use Case**:  
-Imagine you want a lightweight configuration for terminal sessions and a full-featured IDE setup for development.
-
-**Nix Configuration**:
+In your `packageDefintions`, if you wanted to include it in a package named
+`myCoolNeovimPackage`, launched with either `myCoolNeovimPackage` or `vi`,
+you could have:
 
 ```nix
-packageDefinitions = {
-  ide = {
-    startupPlugins = with pkgs.vimPlugins; [ 
-        plenary-nvim
-        telescope-nvim
-    ];
-    categories = { ide = true };
-  };
-  minimal = {
-    startupPlugins = with pkgs.vimPlugins; [ vim-easy-align ];
-    categories = { ide = false };
-  };
-};
+    # see :help nixCats.flake.outputs.packageDefinitions
+    packageDefinitions = {
+      myCoolNeovimPackage = { pkgs, ... }@misc: {
+        settings = {
+          aliases = [ "vi" ];
+        };
+        categories = {
+          # setting the value to true will include it!
+          general = true;
+          # yes you can nest them
+        };
+      };
+      # You can return as many packages as you want
+    };
+    defaultPackageName = "myCoolNeovimPackage";
 ```
 
-**Lua Code**:
+They also return a set of settings, for the full list see `:h nixCats.flake.outputs.settings`
 
-```lua
-local nixCats = require('nixCats')
+Then, a package is exported and built based on that using the nixCats builder
+function, and various flake exports such as modules based on your config
+are made using utility functions provided.
+The templates take care of that part for you, just add stuff to lists.
 
--- Check if a plugin is enabled in the current environment
-if nixCats("ide") then
-  require('telescope').setup {}
-end
-```
+But the cool part. That set of settings and categories is translated verbatim
+from a nix set to a lua table, and put into a plugin that returns it.
+It also passes the full set of plugins included via nix and their store paths
+in the same manner. This gives full transparency to your neovim of everything
+in nix. Passing extra info is rarely necessary outside of including categories
+and setting settings, but it can be useful, and anything other than nix
+functions may be passed. You then have access to the contents of these tables
+anywhere in your neovim, because they are literally a set hardcoded into a
+lua file on your runtimpath.
 
----
+You may use the `:NixCats` user command to view these
+tables for your debugging. There is a global function defined that
+makes checking subcategories easier. Simply call `nixCats('the.category')!`
+It will return the nearest parent category value, but nil if it was a table,
+because that would mean a different sub category was enabled, but this one was
+not. It is simply a getter function for the table `require('nixCats').cats`
+see `:h nixCats` for more info.
 
-### Multiple Configurations
+That is what enables full transparency of your nix configuration
+to your neovim! Everything you could have needed to know from nix
+is now easily passed, or already available, through the nixCats plugin!
 
-nixCats supports managing **multiple configurations** within the same project. You can define multiple entries in `packageDefinitions` for different purposes, such as:
+It has a shorthand for importing plugins that arent on nixpkgs, covered in
+`:h nixCats.flake.inputs` and the templates set up the outputs for you.
+Info about those outputs is detailed in `nixCats.flake.outputs.exports`
+You can also add overlays accessible to the pkgs object above, and set config
+values for it, how to do that is at the top of the templates, and covered in
+help at `:h nixCats.flake.outputs.overlays` and `:h nixCats.flake.outputs.overlays`
 
-1. A **development environment** with IDE features.
-2. A **lightweight setup** for editing configuration files.
+It also has a template containing some lua functions that can allow you
+to adapt your configuration to work without nix. For more info see `:h
+nixCats.luaUtils` It contains useful functions,
+such as "did nix load neovim" and "if not nix do this, else do that"
+It also contains a simple wrapper for `lazy.nvim` that does the rtp reset
+properly, and then can be used to tell lazy not
+to download stuff in an easy to use fashion.
 
-**Example**:
-
-```nix
-packageDefinitions = {
-  fullIde = {
-    startupPlugins = with pkgs.vimPlugin; [ coc-nvim ];
-    wrapRc = true;
-  };
-  minimal = {
-    startupPlugins = with pkgs.vimPlugin; [ vim-commentary ];
-    wrapRc = false;
-  };
-};
-```
-
----
-
-## Advanced Features
-
-### Dynamic Configurations with Categories
-
-```lua
--- Example of using categories dynamically in Lua
-if nixCats("python.ide") then
-  require('lspconfig').pyright.setup {}
-end
-```
-
-### Managing Dependencies  
-
-- Use the `lspsAndRuntimeDeps` field to include tools like `pyright` or `rust-analyzer` in your configuration.
-
----
-
-## Challenges and Solutions
-
-### Issue: Mason Compatibility  
-Mason.nvim doesn’t work on NixOS due to path issues.
-
-**Solution**:  
-Use `lspsAndRuntimeDeps` in `flake.nix` to install LSPs.
-
----
-
-## Conclusion
-
-nixCats simplifies and enhances Neovim configuration management using the power of Nix. Whether you're a beginner or an advanced user, its modular architecture, category system, and Lua messaging enable a smooth and scalable development experience.
-
+The goal of the starter templates is so that the usage at the start can be as simple
+as adding plugins to lists and calling `require('theplugin').setup()`
+Most further complexity is optional, and very complex things can be achieved
+with only minor changes in nix, and some `nixCats('something')` calls.
+You can then import the finished package, and reconfigure it again
+without duplication using the override function! see `:h nixCats.overriding`.
