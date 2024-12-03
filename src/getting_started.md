@@ -5,9 +5,9 @@ Here’s a simple walkthrough to set up nixCats:
 
 1. **Clone the Template**:
 
-    ```bash
-    mkdir mynixcat && cd mynixcat
-    nix flake init -t github:BirdeeHub/nixCats-nvim
+    ```shell
+    $ mkdir mynixcat && cd mynixcat
+    $ nix flake init -t github:BirdeeHub/nixCats-nvim
     ```
 
 2. **Edit `flake.nix`**:
@@ -48,6 +48,6 @@ Here’s a simple walkthrough to set up nixCats:
 
 3. **Open Neovim**:
     ```bash
-    nix run .
+    $ nix run .
     ```
 
