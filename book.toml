@@ -6,10 +6,9 @@ src = "src"
 title = "NixCats Book"
 
 [output.html]
-additional-js = ["custom-highlight.js"]
 cname = "nixcat-book"
 git-repository-url = "https://github.com/rayslash/nixcats-book"
-edit-url-template = "https://github.com/rayslash/nixcats-book/edit/main/doc/{path}"
+edit-url-template = "https://github.com/rayslash/nixcats-book/edit/main/{path}"
 
 [rust]
 edition = "2021"
