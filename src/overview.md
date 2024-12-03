@@ -33,10 +33,9 @@ home.".config/nvim/ftplugin/lua.lua".source = builtins.readFile ./ftplugin/lua.l
 
 > Usually, `$HOME` in Linux systems is defined as `/home/<user>`, where `<user>` represent the current logged-in user.
 
-An example of module that override the nixpkgs neovim derivation to add extra plugins that are not available in `nixpkgs`:
+An example that override the nixpkgs neovim derivation to add extra plugins that are not available in `nixpkgs`:
 
 ```nix
-# modules/nixos/neovim/default.nix
 { config, pkgs, ... }:
 
 let
