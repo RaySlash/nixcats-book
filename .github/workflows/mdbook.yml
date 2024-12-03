@@ -1,6 +1,11 @@
-name: Deploy nixCats-Book
+# Sample workflow for building and deploying a mdBook site to GitHub Pages
+#
+# To get started with mdBook see: https://rust-lang.github.io/mdBook/index.html
+#
+name: Deploy mdBook site to Pages
 
 on:
+  # Runs on pushes targeting the default branch
   push:
     branches: ["master"]
 
@@ -20,6 +25,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Build job
   build:
     runs-on: ubuntu-latest
     env:
@@ -34,8 +40,8 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
-      - name: Test with mdBook
-        run: mdbook test
+      - name: Build with mdBook
+        run: mdbook build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
